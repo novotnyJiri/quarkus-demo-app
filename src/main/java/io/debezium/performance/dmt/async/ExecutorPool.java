@@ -3,12 +3,9 @@ package io.debezium.performance.dmt.async;
 import io.debezium.performance.dmt.dao.Dao;
 import io.debezium.performance.dmt.dao.DaoManager;
 import io.quarkus.runtime.Startup;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -20,39 +17,31 @@ import java.util.function.Consumer;
 @Startup
 public class ExecutorPool {
     private final ExecutorService pool;
-    private final BlockingQueue<RunnableUpsertSecond> runnableUpsertSecondQueue;
+    private final BlockingQueue<RunnableTask> runnableTasksQueue;
     private CountDownLatch latch;
 
 
     @Inject
-    public ExecutorPool(@ConfigProperty(name = "executor.size", defaultValue = "10") int poolSize, DaoManager manager) {
-        pool = Executors.newFixedThreadPool(poolSize);
+    public ExecutorPool(DaoManager manager) {
+        pool = Executors.newFixedThreadPool(10);
         latch = new CountDownLatch(0);
-        runnableUpsertSecondQueue = new ArrayBlockingQueue<>(poolSize);
-        for (int i = 0; i < poolSize; i++) {
-            runnableUpsertSecondQueue.add(new RunnableUpsertSecond(manager.getEnabledDbs()));
+        runnableTasksQueue = new ArrayBlockingQueue<>(10);
+        for (int i = 0; i < 10; i++) {
+            runnableTasksQueue.add(new RunnableTask(manager.getEnabledDbs()));
         }
     }
 
-    public void executeQuery(String sqlQuery) {
-        executeFunction(dao -> dao.executeStatement(sqlQuery));
-    }
-
-    public void executeBatchQuery(List<String> sqlQueries) {
-        executeFunction(dao -> dao.executeBatchStatement(sqlQueries));
-    }
-
     public void executeFunction(Consumer<Dao> daoFunction) {
-        RunnableUpsertSecond task;
+        RunnableTask task;
         try {
-            task = runnableUpsertSecondQueue.take();
+            task = runnableTasksQueue.take();
         } catch (InterruptedException e) {
             return;
         }
         pool.submit(() -> {
             task.setDaoFunctionAndExecute(daoFunction);
             try {
-                runnableUpsertSecondQueue.put(task);
+                runnableTasksQueue.put(task);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -60,17 +49,11 @@ public class ExecutorPool {
         });
     }
 
-
-
     public void setCountDownLatch(int number) {
         latch = new CountDownLatch(number);
     }
 
     public CountDownLatch getLatch() {
         return latch;
-    }
-
-    public int getPoolSize() {
-        return ConfigProvider.getConfig().getValue("executor.size", int.class);
     }
 }

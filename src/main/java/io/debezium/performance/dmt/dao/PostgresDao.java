@@ -5,17 +5,11 @@
  */
 package io.debezium.performance.dmt.dao;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 
 
 import io.debezium.performance.dmt.dataSource.PostgresDataSource;
-import io.debezium.performance.dmt.exception.RuntimeSQLException;
-import io.debezium.performance.dmt.queryCreator.PostgresQueryCreator;
 import io.quarkus.arc.Unremovable;
 import io.quarkus.arc.lookup.LookupIfProperty;
 
@@ -25,23 +19,12 @@ import io.quarkus.arc.lookup.LookupIfProperty;
 public final class PostgresDao extends AbstractBasicDao {
 
     @Inject
-    public PostgresDao(PostgresDataSource source, PostgresQueryCreator queryCreator) {
-        super(source, queryCreator);
+    public PostgresDao(PostgresDataSource source) {
+        super(source);
     }
 
     @Override
-    public void resetDatabase() {
-        try (Connection conn = source.getConnection();
-                Statement stmt = conn.createStatement()) {
-            String schema = "public";
-            stmt.execute(queryCreator.dropDatabase(schema));
-            stmt.execute(queryCreator.createDatabase(schema));
-            LOG.info("Successfully reset database");
-        }
-        catch (SQLException ex) {
-            LOG.error("Could not reset database");
-            LOG.error(ex.getMessage());
-            throw new RuntimeSQLException(ex);
-        }
+    public void execute(String query) {
+        LOG.info(query + "Executed in Postgres");
     }
 }
