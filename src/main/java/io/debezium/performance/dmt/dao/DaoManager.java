@@ -8,25 +8,26 @@ package io.debezium.performance.dmt.dao;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.enterprise.inject.spi.CDI;
+import javax.enterprise.inject.Instance;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 
 @Singleton
 public final class DaoManager {
-    List<Dao> enabledDbs;
-
-    public DaoManager() {
-        enabledDbs = new ArrayList<>();
-        if (CDI.current().select(PostgresDao.class).isResolvable()) {
-            enabledDbs.add(CDI.current().select(PostgresDao.class).get());
-        }
-        if (CDI.current().select(MysqlDao.class).isResolvable()) {
-            enabledDbs.add(CDI.current().select(MysqlDao.class).get());
-        }
-    }
+    @Inject
+    Instance<MysqlDao> mysql;
+    @Inject
+    Instance<PostgresDao> postgres;
 
     public List<Dao> getEnabledDbs() {
-        return enabledDbs;
+        List<Dao> returnList = new ArrayList<>();
+        if (postgres.isResolvable()) {
+            returnList.add(postgres.get());
+        }
+        if (mysql.isResolvable()) {
+            returnList.add(mysql.get());
+        }
+        return returnList;
     }
 }

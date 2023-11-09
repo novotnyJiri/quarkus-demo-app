@@ -1,7 +1,6 @@
 package io.debezium.performance.dmt.async;
 
 import io.debezium.performance.dmt.dao.Dao;
-import io.debezium.performance.dmt.service.MainService;
 import org.jboss.logging.Logger;
 
 import java.util.List;
@@ -21,11 +20,10 @@ public class RunnableTask implements Runnable {
     @Override
     public void run()
     {
-        LOG.info("Starting iteration through daos");
         for (Dao dao : dbs) {
-            LOG.info("Trying to execute query to dao");
+            LOG.info("Trying to execute query to dao -- EXPECTED TO PRINT");
             daoFunction.accept(dao);
-            LOG.info("Succesful exectuion to dao");
+            LOG.info("Successful execution to dao -- EXPECTED TO FAIL PRINT");
         }
     }
 
